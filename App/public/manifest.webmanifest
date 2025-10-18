@@ -1,0 +1,56 @@
+{
+  "name": "Kisaantic AI - The Farmer's AI Friend",
+  "short_name": "Kisaantic",
+  "description": "Intelligent agentic AI platform helping farmers choose the right crops, secure equipment at the best prices, and sell directly to nearby markets—maximizing ROI with full control.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6fbf5",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait-primary",
+  "categories": ["agriculture", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/logo-kisaantic.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    { 
+      "src": "/icons/icon-192.jpg", 
+      "sizes": "192x192", 
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    { 
+      "src": "/icons/icon-512.jpg", 
+      "sizes": "512x512", 
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/placeholder.jpg",
+      "sizes": "540x720",
+      "type": "image/jpeg",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with Kisaantic AI",
+      "url": "/chat",
+      "icons": [{ "src": "/logo-kisaantic.jpg", "sizes": "any" }]
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "description": "View and edit your profile",
+      "url": "/profile",
+      "icons": [{ "src": "/logo-kisaantic.jpg", "sizes": "any" }]
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.98 0.01 140);
+  --foreground: oklch(0.23 0.02 140);
+  --card: oklch(0.985 0.01 140);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.63 0.18 142); /* fresh green */
+  --primary-foreground: oklch(0.985 0 0); /* white */
+  --secondary: oklch(0.96 0.02 140); /* soft neutral */
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.95 0.02 140);
+  --muted-foreground: oklch(0.45 0.02 140);
+  --accent: oklch(0.85 0.09 88); /* warm golden */
+  --accent-foreground: oklch(0.23 0.02 140);
+  --destructive: oklch(0.62 0.2 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.92 0.01 140);
+  --input: var(--border);
+  --ring: oklch(0.7 0.12 142); /* green ring */
+  --chart-1: oklch(0.63 0.18 142);
+  --chart-2: oklch(0.74 0.05 110);
+  --chart-3: oklch(0.82 0.09 88);
+  --chart-4: oklch(0.55 0.08 200);
+  --chart-5: oklch(0.4 0.03 140);
+  --radius: 0.625rem;
+  --sidebar: var(--secondary);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --background: oklch(0.2 0.02 140);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.22 0.02 140);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.8 0.16 142);
+  --primary-foreground: oklch(0.13 0.01 140);
+  --secondary: oklch(0.26 0.02 140);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.26 0.02 140);
+  --muted-foreground: oklch(0.72 0.03 140);
+  --accent: oklch(0.78 0.11 88);
+  --accent-foreground: oklch(0.13 0.01 140);
+  --destructive: oklch(0.5 0.2 27);
+  --destructive-foreground: var(--foreground);
+  --border: oklch(0.28 0.02 140);
+  --input: var(--border);
+  --ring: oklch(0.7 0.16 142);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.18 0.02 140);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* reduce rubber-banding and accidental scroll chaining */
+    overscroll-behavior: none;
+  }
+}
+
+/* custom scrollbars themed to design tokens */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--muted);
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--primary);
+  border-radius: 8px;
+  border: 2px solid var(--muted);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.58 0.2 142); /* slightly darker green on hover */
+}
+
+/* Professional animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in-from-bottom {
+  animation: slide-in-from-bottom 0.4s ease-out;
+}
+
+.animate-slide-in-from-left {
+  animation: slide-in-from-left 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea, select {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle hover lift for cards */
+.card-hover {
+  transition: all 0.2s ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+@layer utilities {
+  /* Use when page content should fill viewport excluding 64px header (h-16) */
+  .vh-header {
+    min-height: calc(100svh - 64px);
+  }
+
+  /* Hide native scrollbars on a container while preserving scroll locking visuals */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  /* Smooth scrolling for all scrollable elements */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+}
+/* End utilities */
