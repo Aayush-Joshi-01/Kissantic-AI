@@ -1,0 +1,58 @@
+{
+    "weather_advisor": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticWeatherAdvisor",
+      "description": "Expert weather advisor for agricultural decision making",
+      "status": "ready"
+    },
+    "crop_specialist": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticCropSpecialist",
+      "description": "Expert crop management and agricultural practices advisor",
+      "status": "ready"
+    },
+    "pest_manager": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticPestManager",
+      "description": "Expert pest and disease management specialist",
+      "status": "ready"
+    },
+    "soil_analyst": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticSoilAnalyst",
+      "description": "Expert soil health and fertility management specialist",
+      "status": "ready"
+    },
+    "irrigation_expert": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticIrrigationExpert",
+      "description": "Expert water management and irrigation specialist",
+      "status": "ready"
+    },
+    "crop_planner": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticCropPlanner",
+      "description": "Expert crop planning with ROI analysis and recommendations",
+      "status": "ready"
+    },
+    "equipment_vendor": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticEquipmentVendor",
+      "description": "Expert equipment recommendations, vendors, and rental services",
+      "status": "ready"
+    },
+    "market_linkage": {
+      "agent_id": "**********",
+      "alias_id": "**********",
+      "name": "KisaanticMarketLinkage",
+      "description": "Expert market guidance, mandi prices, and selling strategies",
+      "status": "ready"
+    }
+  }
