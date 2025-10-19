@@ -841,8 +841,6 @@ Empower **100,000+ farmers** across India with AI-driven agricultural intelligen
 
 ---
 
-
-
 ## Documentation
 
 ### For Users

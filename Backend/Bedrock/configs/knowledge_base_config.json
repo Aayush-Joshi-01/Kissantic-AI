@@ -1,0 +1,32 @@
+{
+  "weather-advisor": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  },
+  "crop-specialist": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  },
+  "pest-manager": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  },
+  "soil-analyst": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  },
+  "irrigation-expert": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  },
+  "vendor-product-directory-mp": {
+    "knowledge_base_id": "**********",
+    "data_source_id": "**********",
+    "status": "ready"
+  }
+}
