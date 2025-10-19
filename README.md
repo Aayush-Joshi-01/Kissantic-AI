@@ -715,32 +715,49 @@ Kisaantic-AI/
 
 ### Application Screenshots
 
-[Screenshots will be added here showing:]
+#### 1. Landing Page
+- Features Our Vision for the Application
 
-#### 1. Authentication & Onboarding
+![Landing Page](Assets/Landing.png)
+
+#### 2. Authentication & Onboarding
 - Login/Signup Interface
 - Profile Setup with Location Selection
 
-#### 2. Chat Interface
+![Signup Page](Assets/Signup.png)
+![Login Page](Assets/Login.png)
+
+#### 3. Chat Interface
 - Multi-Agent Chat with Comprehensive Responses
 - Real-Time Data Integration Display
 - Markdown Formatted Responses with Tables
 
-#### 3. User Management
+![Chat Interface](Assets/Interface.png)
+![Chat](Assets/Chat.png)
+
+#### 4. User Management
 - Profile Dashboard
 - Farm Details Management
 - Session History Browser
 
-#### 4. Mobile Experience
+![Profile Page](Assets/Profile.png)
+
+#### 5. Mobile Experience
 - Responsive Mobile Interface
 - PWA Features
 - Touch-Optimized Chat
+
+![Mobile Interfaces](Assets/Mobile-Landing.png)
+![Mobile Interfaces](Assets/Mobile-Profile.png)
+![Mobile Interfaces](Assets/Mobile-Download.jpg)
+![Mobile Interfaces](Assets/Mobile-Chat.png)
+![Mobile Interfaces](Assets/Mobile-Session.png)
 
 ---
 
 ## Architecture Diagram
 
-![Kisaantic AI Architecture](path/to/architecture-diagram.png)
+![Kisaantic AI Architecture](Assets/Kissantic-AI.architecture.png)
 
 *Comprehensive system architecture showing:*
 - *Frontend (Next.js) → API Gateway → Chat Lambda*
