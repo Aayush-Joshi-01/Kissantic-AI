@@ -1,0 +1,17 @@
+{
+  "meta_orchestrator": {
+    "agent_id": "********",
+    "alias_id": "********",
+    "name": "KisaanticMetaOrchestrator",
+    "action_groups": [
+      "WebSearch",
+      "AgroData",
+      "NewsSearch"
+    ]
+  },
+  "synthesizer": {
+    "agent_id": "********",
+    "alias_id": "********",
+    "name": "KisaanticSynthesizer"
+  }
+}

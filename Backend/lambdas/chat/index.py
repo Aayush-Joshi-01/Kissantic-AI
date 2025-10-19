@@ -20,7 +20,7 @@ from dynamodb_helper import (
 
 # Import orchestrator
 try:
-    from orchestrator_agent import MultiAgentOrchestrator
+    from orchestrator import MultiAgentOrchestrator
     ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     print("❌ Orchestrator not available")

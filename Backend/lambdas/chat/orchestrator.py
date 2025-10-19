@@ -44,11 +44,20 @@ class MultiAgentOrchestrator:
         
         # Use Nova Lite for routing - fast and cost-effective
         self.routing_model = "apac.amazon.nova-lite-v1:0"
+        self.synthesis_model = "apac.amazon.nova-pro-v1:0"
         
         # API keys and URLs
         self.langsearch_key = os.getenv('LANGSEARCH_API_KEY', '')
         self.news_api_key = os.getenv('NEWS_API_KEY', '')
-        self.agro_api_url = os.getenv('AGRO_API_URL', 'https://d8o991ajjl.execute-api.ap-south-1.amazonaws.com/api')
+        
+        # FIX: Construct full Agro API URL with /agro-api prefix
+        base_url = os.getenv('AGRO_API_URL', 'https://d8o991ajjl.execute-api.ap-south-1.amazonaws.com/api')
+        
+        # Ensure URL doesn't have duplicate /agro-api
+        if '/agro-api' not in base_url:
+            self.agro_api_url = f"{base_url.rstrip('/')}/agro-api"
+        else:
+            self.agro_api_url = base_url.rstrip('/')
         
         # Load agent configurations
         self.agents = self._load_agent_config()
@@ -85,7 +94,12 @@ class MultiAgentOrchestrator:
         
         try:
             logger.info(f"🌾 Fetching agricultural data for ({latitude}, {longitude})")
+            logger.info(f"   URL: {self.agro_api_url}/complete")
             api_start = asyncio.get_event_loop().time()
+            
+            # Construct full URL for debugging
+            full_url = f"{self.agro_api_url}/complete?lat={latitude}&lon={longitude}"
+            logger.info(f"   Full URL: {full_url}")
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -94,6 +108,8 @@ class MultiAgentOrchestrator:
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
                     api_time = asyncio.get_event_loop().time() - api_start
+                    
+                    logger.info(f"   Response status: {response.status}")
                     
                     if response.status == 200:
                         data = await response.json()
@@ -106,24 +122,36 @@ class MultiAgentOrchestrator:
                         
                         if 'soil' in data:
                             moisture = data['soil'].get('avg_moisture', 'N/A')
-                            logger.info(f"   Soil moisture: {moisture} m³/m³")
+                            dryness = data['soil'].get('dryness_index', 'N/A')
+                            logger.info(f"   Soil: {moisture} m³/m³, dryness {dryness}/100")
                         
                         if 'historical' in data:
                             season = data['historical'].get('relevant_season', 'N/A')
-                            logger.info(f"   Season: {season}")
+                            context = data['historical'].get('season_context', 'N/A')
+                            logger.info(f"   Season: {season} ({context})")
+                            
+                            # Log anomalies
+                            anomalies = data['historical'].get('seasonal_comparison', {}).get('anomaly_flags', [])
+                            if anomalies:
+                                logger.info(f"   ⚠️ Anomalies: {', '.join(anomalies)}")
                         
                         logger.info(f"✅ Agro data fetched in {api_time:.2f}s")
                         return data
                     else:
                         error_text = await response.text()
-                        logger.error(f"❌ Agro API error {response.status}: {error_text[:200]}")
+                        logger.error(f"❌ Agro API error {response.status}: {error_text[:500]}")
                         return None
                         
         except asyncio.TimeoutError:
             logger.error(f"❌ Agro API timeout after 30s")
             return None
+        except aiohttp.ClientError as e:
+            logger.error(f"❌ Agro API network error: {str(e)}")
+            return None
         except Exception as e:
-            logger.error(f"❌ Agro API error: {str(e)}")
+            logger.error(f"❌ Agro API unexpected error: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
     
     async def analyze_query_with_llm(
@@ -614,13 +642,6 @@ RESPONSE GUIDELINES:
         - Use clear, farmer-friendly language
         - Include 300-600 words of detailed guidance
 
-        CRITICAL LANGUAGE RULE:
-        - Respond ONLY in ENGLISH unless the query is explicitly in Hindi or another language or is instructed to answer in that language
-        - If query is in Englishand not instructed to switch language, response must be 100% in English  
-        - If query is in Hindi, you may use Hindi
-        - If query is in any other language then you can use that langugage for the conversation
-        - DO NOT mix languages unnecessarily
-
         FARMER'S QUESTION: "{query}"
 
         Provide expert advice addressing their specific situation with real-time data integration:
@@ -691,8 +712,8 @@ RESPONSE GUIDELINES:
         user_context: Dict
     ) -> str:
         """
-        Synthesize all sources into 4000-5000 token comprehensive response
-        Now includes agricultural data integration
+        Synthesize all sources into comprehensive response
+        Matches Kisaantic AI response format
         """
         
         logger.info("🎯 Synthesizing comprehensive response...")
@@ -700,21 +721,21 @@ RESPONSE GUIDELINES:
         # Build synthesis prompt
         synthesis_prompt = f"""You are synthesizing a COMPREHENSIVE agricultural response from multiple expert sources.
 
-TARGET OUTPUT: 4000-5000 tokens (approximately 3000-3800 words)
+    FARMER'S ORIGINAL QUESTION: "{query}"
 
-FARMER'S ORIGINAL QUESTION: "{query}"
+    CURRENT DATE: {datetime.now().strftime('%B %d, %Y')}
 
-FARMER CONTEXT:
-- Location: {user_context.get('Address')}
-- Farm Size: {user_context.get('FarmSize')} acres
-- Crop: {user_context.get('CropType')}
+    FARMER CONTEXT:
+    - Location: {user_context.get('Address')}
+    - Farm Size: {user_context.get('FarmSize')} acres
+    - Crop: {user_context.get('CropType')}
 
-QUERY ANALYSIS:
-- Type: {analysis.get('query_type')}
-- Complexity: {analysis.get('response_complexity')}
-- Location-specific: {analysis.get('location_specific')}
+    QUERY ANALYSIS:
+    - Type: {analysis.get('query_type')}
+    - Complexity: {analysis.get('response_complexity')}
+    - Location-specific: {analysis.get('location_specific')}
 
-"""
+    """
         
         # Add real-time agricultural data summary
         if agro_data:
@@ -723,29 +744,29 @@ QUERY ANALYSIS:
             current = agro_data.get('current', {})
             if current:
                 synthesis_prompt += f"""Current Conditions:
-- Temperature: {current.get('temp_c')}°C
-- Humidity: {current.get('humidity_pct')}%
-- Precipitation: {current.get('precipitation_mm')} mm
-- Condition: {current.get('condition')}
+    - Temperature: {current.get('temp_c')}°C
+    - Humidity: {current.get('humidity_pct')}%
+    - Precipitation: {current.get('precipitation_mm')} mm
+    - Condition: {current.get('condition')}
 
-"""
+    """
             
             soil = agro_data.get('soil', {})
             if soil:
                 synthesis_prompt += f"""Soil Status:
-- Average Moisture: {soil.get('avg_moisture')} m³/m³
-- Dryness Index: {soil.get('dryness_index')}/100
-- Trend: {soil.get('moisture_trend')}
+    - Average Moisture: {soil.get('avg_moisture')} m³/m³
+    - Dryness Index: {soil.get('dryness_index')}/100
+    - Trend: {soil.get('moisture_trend')}
 
-"""
+    """
             
             historical = agro_data.get('historical', {})
             if historical:
-                synthesis_prompt += f"""Seasonal Context:
-- Season: {historical.get('relevant_season')}
-- Stage: {historical.get('season_context')}
+                synthesis_prompt += f"""Historical Seasonal Context:
+    - Season: {historical.get('relevant_season')}
+    - Stage: {historical.get('season_context')}
 
-"""
+    """
         
         # Add agent responses
         if agent_responses:
@@ -776,115 +797,121 @@ QUERY ANALYSIS:
                 synthesis_prompt += f"  Date: {article.get('publishedAt', 'Recent')}\n\n"
         
         synthesis_prompt += f"""
-{'='*60}
-YOUR SYNTHESIS TASK
-{'='*60}
+    {'='*60}
+    YOUR SYNTHESIS TASK - KISAANTIC AI RESPONSE FORMAT
+    {'='*60}
 
-Create ONE UNIFIED, COMPREHENSIVE response (4000-5000 tokens) that:
+    Create ONE UNIFIED, COMPREHENSIVE response following this EXACT structure:
 
-**STRUCTURE:**
+    **RESPONSE STRUCTURE(Follow this structure but do not mention them If any data is not there dont mention it use general intelligence):**
 
-1. **IMMEDIATE ANSWER (200-300 words)**
-   - Direct answer to farmer's question
-   - Key recommendation upfront
-   - Most critical information first
-   - **Reference current conditions if relevant (temp, soil moisture, weather)**
+    1. **Immediate Answer 🌾** (Opening section with emoji)
+    - Start with a clear heading related to the query (e.g., "Crop Max Vendor Overview", "Wheat Cultivation Guide")
+    - First paragraph: Direct answer addressing the farmer's location, farm size, and current conditions
+    - **Weave in real-time data naturally** (e.g., "Given the current conditions with temperatures around 28°C...")
+    - Include a concrete recommendation or key insight
+    - Length: 150-250 words
 
-2. **DETAILED ANALYSIS (1500-2000 words)**
-   - Integrate ALL specialist insights seamlessly
-   - **Weave in real-time agricultural data naturally throughout**
-   - Include specific numbers: costs, yields, prices, ROI percentages
-   - Use data tables for comparisons
-   - Provide step-by-step breakdowns
-   - Reference web search data naturally
-   - Include market intelligence from searches
-   - **Explain how current weather/soil affects recommendations**
+    2. **Detailed Analysis 🌱** (Major section with emoji)
+    - Multiple subsections with clear, topic-specific headings (NO generic labels like "Detailed Analysis")
+    - Examples: "Equipment Insights", "Cost-Benefit Analysis", "Seasonal Recommendations", "Market Intelligence"
+    - Each subsection: 200-400 words
+    - Include specific numbers: costs, yields, prices, ROI percentages
+    - **Integrate real-time agricultural data seamlessly** (e.g., "Current soil moisture at 0.25 m³/m³ indicates...")
+    - Use data naturally in recommendations
+    - Reference web search data and news when relevant
+    - Use **bold** for key terms and numbers
 
-3. **PRACTICAL GUIDANCE (800-1000 words)**
-   - Action steps with timelines
-   - **Timing based on current conditions (e.g., "With current soil moisture at X, irrigate in Y days")**
-   - Resource requirements (equipment, inputs, labor)
-   - Cost-benefit calculations
-   - Risk factors and mitigation
-   - Vendor/market access information
-   - **Weather-based operation scheduling**
+    3. **Action Plan 📋** (ALWAYS in table format)
+    - Create a markdown table with clear action steps
+    - Columns: "Timeline / Stage" | "Action" | "Details / Resources"
+    - Include 5-10 actionable steps
+    - Be specific with timing based on current conditions
+    - Include costs, quantities, and vendor names where applicable
+    
+    Example format:
+    | Timeline / Stage | Action | Details / Resources |
+    |-----------------|--------|---------------------|
+    | Immediate (1-3 days) | Soil testing | Contact AgriMax Labs, ₹500 per sample |
+    | Week 1 | Purchase seeds | Recommended: XYZ variety, 25kg needed |
 
-4. **SUPPLEMENTARY INFORMATION (500-700 words)**
-   - Recent news and policy updates (from news data)
-   - Seasonal considerations
-   - Alternative options and scenarios
-   - Long-term planning suggestions
-   - **Expected weather patterns and crop implications**
+    4. **Additional Insights** (If relevant)
+    - Subsections for: Market trends, News updates, Alternative options, Risk factors
+    - Each: 100-200 words
+    - Include recent news/policies from news data
+    - **Weather-based considerations using current data**
 
-5. **QUICK REFERENCE SUMMARY (200-300 words)**
-   - Key takeaways in bullet points
-   - Critical numbers and dates
-   - Next immediate steps
-   - **Current conditions snapshot (temp, moisture, season)**
-   - Follow-up questions to ask
+    5. **Quick Summary** (Closing section)
+    - Brief bullet points (5-8 points)
+    - Key numbers and critical dates
+    - **Current conditions snapshot** (temp, moisture, season)
+    - Next immediate action
 
-**QUALITY REQUIREMENTS:**
-- Write as ONE unified expert voice (not separate agents)
-- NO phrases like "According to X agent..." or "The weather advisor says..."
-- **SEAMLESSLY integrate real-time data: "Current soil moisture indicates...", "Given today's temperature of X°C..."**
-- INCLUDE all specific data: prices, vendor names, calculations, weather readings
-- USE farmer's location context throughout
-- PRESERVE all numbers, contacts, specific recommendations
-- NO contradictions - reconcile different viewpoints
-- Natural flow between sections
-- Mix Hindi-English naturally for Indian farmers (English for others)
-- Clear headers with emojis for scannability
-- Bold key terms and numbers
-- Short paragraphs (3-4 sentences max)
+    **CRITICAL FORMATTING RULES:**
 
-CRITICAL LANGUAGE RULE:
-- Respond ONLY in ENGLISH unless the query is explicitly in Hindi or another language or is instructed to answer in that language
-- If query is in Englishand not instructed to switch language, response must be 100% in English  
-- If query is in Hindi, you may use Hindi
-- If query is in any other language then you can use that langugage for the conversation
-- Strictly never answer is the {query} is in english and you are not instructed to switch language
-- DO NOT mix languages unnecessarily
+    ✅ DO:
+    - Use ## for main sections with relevant emojis (e.g., "## Immediate Answer 🌾")
+    - Use ### for subsections with descriptive names (e.g., "### Equipment Cost Analysis")
+    - Use **bold** for emphasis on key terms, numbers, and vendor names
+    - Use tables for action plans, cost breakdowns, and comparisons
+    - Keep paragraphs short (3-4 sentences)
+    - Write as ONE unified expert voice
+    - **Seamlessly integrate real-time data**: "Current soil moisture of 0.25 m³/m³ suggests..." not "The soil moisture is 0.25"
 
-**CRITICAL REAL-TIME DATA INTEGRATION:**
-- When discussing irrigation: Reference soil moisture and dryness index
-- When discussing pest/disease: Reference humidity and temperature
-- When discussing sowing/harvesting timing: Reference current season stage
-- When discussing fertilizer: Reference soil temperature and moisture
-- When discussing operations: Reference precipitation and weather conditions
-- NEVER just list the data - APPLY it to give specific advice
+    ❌ DON'T:
+    - Never use headings like "Detailed Analysis" or "Immediate Answer" as shown to user
+    - Never mention "tokens", "word count", or "length requirements"
+    - Never say "According to X agent" or "The weather advisor says"
+    - Never use generic subsection names
+    - Never list data without context
+    - Never use bullet points for action plans (use tables instead)
 
-**FORMATTING:**
-- Use ## for main section headers
-- Use ### for subsections
-- Use **bold** for emphasis and numbers
-- Use bullet points for lists
-- Use tables for comparisons (markdown format)
+    **REAL-TIME DATA INTEGRATION EXAMPLES:**
 
-**EXAMPLE OF GOOD DATA INTEGRATION:**
-❌ BAD: "Current temperature is 28°C and soil moisture is 0.25 m³/m³. Here's advice on irrigation..."
-✅ GOOD: "With soil moisture at 0.25 m³/m³ (dryness index 65/100) and rising temperatures (currently 28°C), your wheat crop needs irrigation within 2-3 days to prevent moisture stress during the critical grain-filling stage."
+    ✅ GOOD: "With current temperatures at 28°C and soil moisture at 0.25 m³/m³ (dryness index 65/100), your wheat crop requires irrigation within 2-3 days to prevent stress during the grain-filling stage."
 
-**CRITICAL:**
-- Must be 4000-5000 tokens (3000-3800 words)
-- Comprehensive yet actionable
-- Specific and data-driven
-- Farmer-friendly language
-- **Real-time data woven naturally throughout**
+    ✅ GOOD: "Given the current humidity of 75% and temperature of 26°C, fungal disease pressure is elevated. Apply preventive fungicide within 48 hours."
 
-Begin synthesis:
-"""
+    ❌ BAD: "Current temperature: 28°C. Current soil moisture: 0.25 m³/m³. Here is advice on irrigation..."
+
+    **TABLE FORMAT FOR ACTION PLANS:**
+
+    Always use markdown tables:
+    ```
+    | Timeline / Stage | Action | Details / Resources |
+    |-----------------|--------|---------------------|
+    | Immediate | First step | Specific details |
+    | Week 1-2 | Second step | Costs, vendors, quantities |
+    ```
+
+    **QUALITY CHECKLIST:**
+    - [ ] Opening has descriptive heading with emoji, not "Immediate Answer"
+    - [ ] Real-time data woven naturally throughout
+    - [ ] Multiple specific subsections under main sections
+    - [ ] Action plan is in table format
+    - [ ] No mention of word/token counts
+    - [ ] All numbers, costs, vendor names included
+    - [ ] Written as unified voice, not separate agents
+    - [ ] Appropriate emojis for scannability
+    - [ ] Short paragraphs throughout
+    - [ ] Same language as query
+
+    **TARGET LENGTH:** Write comprehensively to fully address the query (typically 3000-4000 words), but NEVER mention the length in your response.
+
+    Begin synthesis now:
+    """
 
         try:
             # Use Bedrock for synthesis with high token limit
             response = self.bedrock.invoke_model(
-                modelId=self.routing_model,
+                modelId=self.synthesis_model,
                 body=json.dumps({
                     "messages": [{
                         "role": "user",
                         "content": [{"text": synthesis_prompt}]
                     }],
                     "inferenceConfig": {
-                        "temperature": 1,
+                        "temperature": 0.9,
                         "maxTokens": 5000
                     }
                 })
