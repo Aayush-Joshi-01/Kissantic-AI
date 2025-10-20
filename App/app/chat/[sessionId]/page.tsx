@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import ChatUI from "@/components/chat/chat-ui"
 
-export default function ChatPage() {
+export default function ChatSessionPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+  const params = useParams()
+  const sessionId = params?.sessionId as string | undefined
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -32,7 +34,7 @@ export default function ChatPage() {
 
   return (
     <div className="h-[calc(100svh-64px)] overflow-hidden">
-      <ChatUI initialSessionId={undefined} />
+      <ChatUI initialSessionId={sessionId} />
     </div>
   )
 }

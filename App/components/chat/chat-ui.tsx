@@ -4,7 +4,7 @@ import type React from "react"
 
 import useSWR from "swr"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -72,12 +72,11 @@ function useSessions() {
   return { sessions: data?.items ?? [], error, mutate, isLoading }
 }
 
-export default function ChatUI() {
+export default function ChatUI({ initialSessionId }: { initialSessionId?: string }) {
   const { logout } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { sessions, mutate: refreshSessions } = useSessions()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(initialSessionId || null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
@@ -92,28 +91,14 @@ export default function ChatUI() {
   const [history, setHistory] = useState<ForecastDay | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
 
-  // Load session from URL on mount
-  useEffect(() => {
-    const sessionFromUrl = searchParams.get('session')
-    if (sessionFromUrl && sessionFromUrl !== selectedId) {
-      setSelectedId(sessionFromUrl)
-    }
-  }, [searchParams])
-
   // Update URL when session changes
-  const updateSessionInUrl = useCallback((sessionId: string | null) => {
-    if (sessionId) {
-      router.replace(`/chat?session=${sessionId}`, { scroll: false })
+  useEffect(() => {
+    if (selectedId) {
+      router.replace(`/chat/${selectedId}`, { scroll: false })
     } else {
       router.replace('/chat', { scroll: false })
     }
-  }, [router])
-
-  // Wrapper for setSelectedId that also updates URL
-  const selectSession = useCallback((sessionId: string | null) => {
-    setSelectedId(sessionId)
-    updateSessionInUrl(sessionId)
-  }, [updateSessionInUrl])
+  }, [selectedId, router])
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -233,7 +218,7 @@ export default function ChatUI() {
 
       if (res.ok) {
         const data = await res.json()
-        selectSession(data.session_id)
+        setSelectedId(data.session_id)
         setMessages([])
         refreshSessions()
         setSidebarOpen(false)
@@ -250,6 +235,7 @@ export default function ChatUI() {
     if (!confirm("Delete this session?")) return
     
     const previousSessions = sessions
+    const wasCurrent = selectedId === sessionId
     
     try {
       await refreshSessions(
@@ -260,11 +246,12 @@ export default function ChatUI() {
       const res = await fetchWithAuth(`/api/sessions/${sessionId}`, { method: "DELETE" })
       
       if (res.ok) {
-        if (selectedId === sessionId) {
-          selectSession(null)
-          setMessages([])
+        if (wasCurrent) {
+          // Create new session if we deleted the current one
+          await onNewChat()
+        } else {
+          await refreshSessions()
         }
-        await refreshSessions()
       } else {
         await refreshSessions({ items: previousSessions }, false)
         setError("Failed to delete session")
