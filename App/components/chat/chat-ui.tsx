@@ -4,6 +4,7 @@ import type React from "react"
 
 import useSWR from "swr"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,6 +15,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { LoadingIndicator } from "./loading-indicator"
 import { MarkdownRenderer } from "./markdown-renderer"
+import { BookingOrderSuggestion } from "./booking-order-suggestion"
+import { BookingSuggestion, OrderSuggestion } from "@/lib/types"
 
 type SessionItem = {
   session_id: string
@@ -27,7 +30,11 @@ type Message = {
   sender: "user" | "ai"
   text: string
   created_at: string
-  metadata?: any
+  metadata?: {
+    booking_suggestion?: BookingSuggestion
+    order_suggestion?: OrderSuggestion
+    [key: string]: any
+  }
 }
 
 type WeatherData = {
@@ -67,6 +74,8 @@ function useSessions() {
 
 export default function ChatUI() {
   const { logout } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { sessions, mutate: refreshSessions } = useSessions()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -82,6 +91,29 @@ export default function ChatUI() {
   const [forecast, setForecast] = useState<ForecastDay | null>(null)
   const [history, setHistory] = useState<ForecastDay | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
+
+  // Load session from URL on mount
+  useEffect(() => {
+    const sessionFromUrl = searchParams.get('session')
+    if (sessionFromUrl && sessionFromUrl !== selectedId) {
+      setSelectedId(sessionFromUrl)
+    }
+  }, [searchParams])
+
+  // Update URL when session changes
+  const updateSessionInUrl = useCallback((sessionId: string | null) => {
+    if (sessionId) {
+      router.replace(`/chat?session=${sessionId}`, { scroll: false })
+    } else {
+      router.replace('/chat', { scroll: false })
+    }
+  }, [router])
+
+  // Wrapper for setSelectedId that also updates URL
+  const selectSession = useCallback((sessionId: string | null) => {
+    setSelectedId(sessionId)
+    updateSessionInUrl(sessionId)
+  }, [updateSessionInUrl])
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -201,7 +233,7 @@ export default function ChatUI() {
 
       if (res.ok) {
         const data = await res.json()
-        setSelectedId(data.session_id)
+        selectSession(data.session_id)
         setMessages([])
         refreshSessions()
         setSidebarOpen(false)
@@ -229,7 +261,7 @@ export default function ChatUI() {
       
       if (res.ok) {
         if (selectedId === sessionId) {
-          setSelectedId(null)
+          selectSession(null)
           setMessages([])
         }
         await refreshSessions()
@@ -280,7 +312,8 @@ export default function ChatUI() {
 
       if (res.ok) {
         const data = await res.json()
-        setSelectedId(data.session_id)
+        const newSessionId = data.session_id
+        selectSession(newSessionId)
         const newMessages = [data.user_message, data.ai_message];
         setMessages((prev) => [...prev, ...newMessages])
         setInput("")
@@ -815,9 +848,19 @@ export default function ChatUI() {
                       {m.sender === "user" ? "You" : "Kisaantic AI"} • {new Date(m.created_at).toLocaleTimeString()}
                     </div>
                     {m.sender === "ai" ? (
-                      <div className="overflow-x-auto">
-                        <MarkdownRenderer content={m.text} />
-                      </div>
+                      <>
+                        <div className="overflow-x-auto">
+                          <MarkdownRenderer content={m.text} />
+                        </div>
+                        {(m.metadata?.booking_suggestion || m.metadata?.order_suggestion) && (
+                          <BookingOrderSuggestion
+                            bookingSuggestion={m.metadata.booking_suggestion}
+                            orderSuggestion={m.metadata.order_suggestion}
+                            messageId={m.message_id}
+                            sessionId={selectedId || ""}
+                          />
+                        )}
+                      </>
                     ) : (
                       <p className="whitespace-pre-wrap text-sm">{m.text}</p>
                     )}

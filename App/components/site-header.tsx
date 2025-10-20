@@ -45,6 +45,9 @@ export default function SiteHeader() {
             <HeaderLink href="/chat" current={pathname?.startsWith("/chat")}>
               Chat
             </HeaderLink>
+            <HeaderLink href="/bookings-orders" current={pathname?.startsWith("/bookings-orders")}>
+              Bookings & Orders
+            </HeaderLink>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -72,6 +75,9 @@ export default function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/bookings-orders">Bookings & Orders</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
