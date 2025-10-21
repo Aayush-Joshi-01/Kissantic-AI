@@ -9,13 +9,15 @@ import traceback
 import asyncio
 import logging
 from datetime import datetime
+import uuid
+
 
 from schemas import ChatRequest, ChatResponse, MessageResponse, ErrorResponse
 from auth import verify_token, extract_token_from_header
 from dynamodb_helper import (
     get_chat_session, create_chat_session, create_message, 
     update_chat_session, get_user_by_id, get_iso_timestamp,
-    get_chat_history_for_agent  
+    get_chat_history_for_agent, get_timestamp, serialize_item, table
 )
 
 # Import orchestrator
@@ -312,8 +314,100 @@ Could you please rephrase your question or provide more details? I'll do my best
             agents_used = []
         
         # ========== SAVE AI RESPONSE ==========
-        logger.info("STEP 8: Saving AI response...")
-        
+        logger.info("STEP 8: Processing booking/order suggestions...")
+
+        # Process booking/order suggestions FIRST
+        booking_saved = None
+        order_saved = None
+
+        if orchestration_result.get('booking_suggestion'):
+            try:
+                booking_data = orchestration_result['booking_suggestion']
+                
+                booking_id = str(uuid.uuid4())
+                timestamp_booking = int(datetime.now().timestamp())
+                iso_timestamp_booking = get_iso_timestamp()
+                
+                booking_item = {
+                    'PK': f'USER#{user_id}',
+                    'SK': f'BOOKING#{timestamp_booking}#{booking_id}',
+                    'GSI1PK': f'BOOKING#{booking_id}',
+                    'GSI1SK': 'METADATA',
+                    'GSI2PK': f'USER#{user_id}#STATUS#pending',
+                    'GSI2SK': str(timestamp_booking),
+                    'EntityType': 'BookingOrder',
+                    'BookingOrderId': booking_id,
+                    'UserId': user_id,
+                    'SessionId': session_id,
+                    'MessageId': 'PENDING',  # Will be updated after message creation
+                    'Type': 'booking',
+                    'VendorName': booking_data['vendor_name'],
+                    'ServiceProduct': booking_data['service_product'],
+                    'EstimatedCost': booking_data.get('estimated_cost'),
+                    'Message': booking_data['message'],
+                    'Status': 'pending',
+                    'AdditionalInfo': booking_data.get('additional_info', {}),
+                    'CreatedAt': timestamp_booking,
+                    'UpdatedAt': timestamp_booking,
+                    'CreatedAtISO': iso_timestamp_booking,
+                    'UpdatedAtISO': iso_timestamp_booking
+                }
+                
+                from dynamodb_helper import serialize_item, table
+                table.put_item(Item=serialize_item(booking_item))
+                
+                booking_saved = booking_item
+                logger.info(f"✅ Booking suggestion saved: {booking_id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to save booking: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+
+        if orchestration_result.get('order_suggestion'):
+            try:
+                order_data = orchestration_result['order_suggestion']
+                
+                order_id = str(uuid.uuid4())
+                timestamp_order = int(datetime.now().timestamp())
+                iso_timestamp_order = get_iso_timestamp()
+                
+                order_item = {
+                    'PK': f'USER#{user_id}',
+                    'SK': f'ORDER#{timestamp_order}#{order_id}',
+                    'GSI1PK': f'ORDER#{order_id}',
+                    'GSI1SK': 'METADATA',
+                    'GSI2PK': f'USER#{user_id}#STATUS#pending',
+                    'GSI2SK': str(timestamp_order),
+                    'EntityType': 'BookingOrder',
+                    'BookingOrderId': order_id,
+                    'UserId': user_id,
+                    'SessionId': session_id,
+                    'MessageId': 'PENDING',  # Will be updated after message creation
+                    'Type': 'order',
+                    'VendorName': order_data['vendor_name'],
+                    'ServiceProduct': order_data['service_product'],
+                    'SuggestedQuantity': order_data.get('suggested_quantity'),
+                    'EstimatedCost': order_data.get('estimated_cost'),
+                    'Message': order_data['message'],
+                    'Status': 'pending',
+                    'AdditionalInfo': order_data.get('additional_info', {}),
+                    'CreatedAt': timestamp_order,
+                    'UpdatedAt': timestamp_order,
+                    'CreatedAtISO': iso_timestamp_order,
+                    'UpdatedAtISO': iso_timestamp_order
+                }
+                
+                from dynamodb_helper import serialize_item, table
+                table.put_item(Item=serialize_item(order_item))
+                
+                order_saved = order_item
+                logger.info(f"✅ Order suggestion saved: {order_id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to save order: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+
+        # Build ai_metadata with booking/order suggestions
         ai_metadata = {
             'orchestrator_used': True,
             'query_type': analysis.get('query_type'),
@@ -326,14 +420,35 @@ Could you please rephrase your question or provide more details? I'll do my best
             'response_tokens': int(len(ai_text.split()) * 1.3),
             'processing_time_seconds': (datetime.now() - start_time).total_seconds()
         }
-        
+
+        # Add booking/order suggestions to metadata
+        if booking_saved:
+            ai_metadata['booking_suggestion'] = {
+                'booking_id': booking_saved['BookingOrderId'],
+                'vendor': booking_saved['VendorName'],
+                'service': booking_saved['ServiceProduct'],
+                'message': booking_saved['Message'],
+                'estimated_cost': booking_saved.get('EstimatedCost')
+            }
+        if order_saved:
+            ai_metadata['order_suggestion'] = {
+                'order_id': order_saved['BookingOrderId'],
+                'vendor': order_saved['VendorName'],
+                'product': order_saved['ServiceProduct'],
+                'message': order_saved['Message'],
+                'suggested_quantity': order_saved.get('SuggestedQuantity'),
+                'estimated_cost': order_saved.get('EstimatedCost')
+            }
+
+        logger.info("STEP 9: Saving AI message with suggestions...")
+
         ai_message = create_message(
             session_id=session_id,
             text=ai_text,
             sender='ai',
             metadata=ai_metadata
         )
-        
+
         logger.info(f"✅ AI message saved: {ai_message['MessageId']}")
         
         # ========== BUILD RESPONSE ==========

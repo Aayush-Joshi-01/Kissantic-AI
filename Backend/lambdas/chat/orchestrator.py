@@ -12,6 +12,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from enum import Enum
 import os
+from boto3.dynamodb.conditions import Key
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -940,7 +942,144 @@ RESPONSE GUIDELINES:
         except Exception as e:
             logger.error(f"❌ Synthesis error: {str(e)}")
             return self._fallback_synthesis(agent_responses, web_search_results, news_results, agro_data)
-    
+
+    async def analyze_for_booking_order(
+        self,
+        query: str,
+        final_response: str,
+        chat_history: List[Dict],
+        user_id: str
+    ) -> dict:
+        """Analyze response for booking/order suggestions using Nova Lite"""
+        
+        logger.info(f"🔍 Analyzing response for bookings/orders (user: {user_id})")
+        logger.info(f"   Response length: {len(final_response)} chars")
+        
+        last_messages = ""
+        if chat_history:
+            recent = chat_history[-2:]
+            for msg in recent:
+                sender = "Farmer" if msg.get('Sender') == 'user' else "AI"
+                last_messages += f"{sender}: {msg.get('Text', '')[:200]}\n"
+        
+        analysis_prompt = f"""Analyze if this agricultural AI response suggests vendor bookings or product orders.
+
+    CONTEXT (Last 2 messages):
+    {last_messages}
+
+    CURRENT QUERY: "{query}"
+
+    AI RESPONSE:
+    {final_response[:3000]}
+
+    TASK: Determine if response contains vendor recommendations requiring:
+    1. BOOKING: Equipment rental, service booking (tractors, harvesters, soil testing)
+    2. ORDER: Product purchase (seeds, fertilizers, pesticides)
+
+    RULES:
+    - Only suggest if vendor name explicitly mentioned
+    - Check if farmer is asking for vendors OR response recommends specific vendors
+    - Max 1 booking + 1 order suggestion per response
+    - Extract: vendor name, product/service, quantity (if mentioned), estimated cost (if mentioned)
+
+    OUTPUT JSON:
+    {{
+    "has_booking": true/false,
+    "has_order": true/false,
+    "booking": {{
+        "vendor_name": "exact vendor name from response",
+        "service": "service being booked",
+        "message": "human-readable confirmation message",
+        "estimated_cost": "cost if mentioned, else null",
+        "additional_info": {{"any": "relevant details"}}
+    }} or null,
+    "order": {{
+        "vendor_name": "exact vendor name from response",
+        "product": "product being ordered",
+        "quantity": "quantity if mentioned, else null",
+        "message": "human-readable confirmation message",
+        "estimated_cost": "cost if mentioned, else null",
+        "additional_info": {{"any": "relevant details"}}
+    }} or null
+    }}
+
+    If no bookings/orders needed, return {{"has_booking": false, "has_order": false, "booking": null, "order": null}}
+    """
+
+        try:
+            logger.info("   Calling Nova Lite for analysis...")
+            response = self.bedrock.invoke_model(
+                modelId=self.routing_model,
+                body=json.dumps({
+                    "messages": [{
+                        "role": "user",
+                        "content": [{"text": analysis_prompt}]
+                    }],
+                    "inferenceConfig": {
+                        "temperature": 0.1,
+                        "maxTokens": 800
+                    }
+                })
+            )
+            
+            response_body = json.loads(response['body'].read())
+            
+            if 'output' in response_body:
+                content = response_body['output'].get('message', {}).get('content', [])
+                analysis_text = content[0].get('text', '{}') if content else '{}'
+            else:
+                analysis_text = response_body.get('completion', '{}')
+            
+            logger.info(f"   Raw LLM response: {analysis_text[:200]}...")
+            
+            analysis_text = analysis_text.strip()
+            if '```json' in analysis_text:
+                analysis_text = analysis_text.split('```json')[1].split('```')[0].strip()
+            elif '```' in analysis_text:
+                analysis_text = analysis_text.split('```')[1].split('```')[0].strip()
+            
+            analysis = json.loads(analysis_text)
+            logger.info(f"   Parsed analysis: has_booking={analysis.get('has_booking')}, has_order={analysis.get('has_order')}")
+            
+            result = {'booking': None, 'order': None}
+            
+            # Create booking suggestion if detected
+            if analysis.get('has_booking') and analysis.get('booking'):
+                booking_data = analysis['booking']
+                result['booking'] = {
+                    'type': 'booking',
+                    'vendor_name': booking_data.get('vendor_name'),
+                    'service_product': booking_data.get('service'),
+                    'estimated_cost': booking_data.get('estimated_cost'),
+                    'message': booking_data.get('message'),
+                    'approved': False,
+                    'additional_info': booking_data.get('additional_info', {})
+                }
+                logger.info(f"📋 Booking suggestion: {booking_data.get('vendor_name')}")
+            
+            # Create order suggestion if detected
+            if analysis.get('has_order') and analysis.get('order'):
+                order_data = analysis['order']
+                result['order'] = {
+                    'type': 'order',
+                    'vendor_name': order_data.get('vendor_name'),
+                    'service_product': order_data.get('product'),
+                    'suggested_quantity': order_data.get('quantity'),
+                    'estimated_cost': order_data.get('estimated_cost'),
+                    'message': order_data.get('message'),
+                    'approved': False,
+                    'additional_info': order_data.get('additional_info', {})
+                }
+                logger.info(f"🛒 Order suggestion: {order_data.get('vendor_name')}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Booking/order analysis failed: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {'booking': None, 'order': None}
+
     def _fallback_synthesis(
         self,
         agent_responses: List[Dict],
@@ -1148,7 +1287,18 @@ Feel free to ask anything about farming - I have access to market data, weather 
             logger.info(f"{'='*70}")
             logger.info(f"✅ ORCHESTRATION COMPLETE")
             logger.info(f"{'='*70}")
-            
+
+            # Step 5: Analyze for booking/order suggestions
+            logger.info("🔍 Starting booking/order analysis...")
+            booking_order_suggestions = await self.analyze_for_booking_order(
+                query=query,
+                final_response=synthesized_response,
+                chat_history=chat_history,
+                user_id=user_context.get('UserId')
+            )
+            logger.info(f"📊 Booking/order analysis result: {booking_order_suggestions}")
+
+            # Then modify the return dict to include these two new keys:
             return {
                 'phase': analysis.get('query_type', 'general'),
                 'agents_consulted': [r['agent'] for r in agent_responses],
@@ -1159,7 +1309,9 @@ Feel free to ask anything about farming - I have access to market data, weather 
                 'context': context,
                 'query': query,
                 'final_response': synthesized_response,
-                'analysis': analysis
+                'analysis': analysis,
+                'booking_suggestion': booking_order_suggestions.get('booking'),
+                'order_suggestion': booking_order_suggestions.get('order')
             }
             
         except Exception as e:
