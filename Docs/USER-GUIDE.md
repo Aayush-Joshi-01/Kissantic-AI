@@ -13,11 +13,12 @@ Welcome to Kisaantic AI! This guide will help you get started with our intellige
 3. [Location Permissions](#location-permissions)
 4. [Profile Setup](#profile-setup)
 5. [Using the Chat Interface](#using-the-chat-interface)
-6. [Example Questions](#example-questions)
-7. [Multilingual Support](#multilingual-support)
-8. [Features Overview](#features-overview)
-9. [Tips for Best Results](#tips-for-best-results)
-10. [Troubleshooting](#troubleshooting)
+6. [Managing Bookings & Orders](#managing-bookings--orders)
+7. [Example Questions](#example-questions)
+8. [Multilingual Support](#multilingual-support)
+9. [Features Overview](#features-overview)
+10. [Tips for Best Results](#tips-for-best-results)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -657,4 +658,4 @@ ROI analysis, vendor recommendations, and step-by-step guidance]
 ---
 
 **Last Updated**: October 19, 2025  
-**Version**: 1.0.0
+**Version**: 2.1.0

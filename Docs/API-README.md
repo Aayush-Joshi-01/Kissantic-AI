@@ -1663,7 +1663,7 @@ Planned webhook events:
 
 ## Versioning
 
-**Current Version:** v1.0
+**Current Version:** v2.1.0
 
 The API uses URL path versioning. Future versions will be accessible via:
 - v1: `/api/...` (current)
@@ -1684,7 +1684,7 @@ For API support, please contact:
 
 ## Changelog
 
-### Version 1.1.0 (2025-10-21)
+### Version 2.1.0 (2025-10-21)
 - **New**: Bookings & Orders endpoints
 - **New**: AI-powered booking/order suggestions in chat
 - **New**: Status management for bookings and orders

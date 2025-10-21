@@ -1734,7 +1734,7 @@ Monitoring:  CloudWatch Logs + Metrics
 
 ---
 
-**Architecture Version**: 2.0.0  
+**Architecture Version**: 2.1.0  
 **Last Updated**: October 19, 2025  
 **Status**: Production Deployed  
 **Total AWS Services**: 10
