@@ -200,6 +200,8 @@ A direct, AI-powered farming advisor that:
 - Response synthesizer for coherent multi-agent synthesis
 - Powered by AWS Bedrock (Nova Lite for agents & routing, Nova Pro for synthesis)
 - Context-aware responses based on location and farm profile
+- **Smart booking/order suggestions** - AI analyzes responses and suggests relevant services/products
+- **One-click confirmations** - Approve equipment bookings and seed orders directly from chat
 
 **Real-Time Data Integration via API Tools**
 - Current weather conditions and 7-day forecasts (Agricultural Data Tool)
@@ -209,6 +211,7 @@ A direct, AI-powered farming advisor that:
 - Equipment availability and pricing (Web Search Tool)
 - Latest agricultural news and policies (News Search Tool)
 - Government schemes and subsidies (News Search Tool)
+- **Vendor booking/order tracking** - Manage service bookings and product orders
 
 **Personalized Experience**
 - User profiles with farm details (size, crop type, location)
@@ -706,6 +709,10 @@ Kisaantic-AI/
 - `GET /api/sessions/{id}` - Get session with messages
 - `PUT /api/sessions/{id}` - Update session title
 - `DELETE /api/sessions/{id}` - Delete session
+
+### Bookings & Orders (2 Lambdas)
+- `GET /api/bookings-orders` - Get all bookings/orders with filters
+- `PUT /api/bookings-orders/update` - Update booking/order status
 
 **Complete API documentation**: [API-README.md](Docs/API-README.md)
 
