@@ -12,8 +12,9 @@ https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/prod
 4. [Weather Endpoints](#weather-endpoints)
 5. [Chat Session Endpoints](#chat-session-endpoints)
 6. [Chat Endpoints](#chat-endpoints)
-7. [Error Responses](#error-responses)
-8. [Rate Limiting](#rate-limiting)
+7. [Bookings & Orders Endpoints](#bookings--orders-endpoints)
+8. [Error Responses](#error-responses)
+9. [Rate Limiting](#rate-limiting)
 
 ---
 
@@ -1286,6 +1287,120 @@ Content-Type: application/json
 
 ---
 
+## Bookings & Orders Endpoints
+
+### 16. Get Bookings & Orders
+
+Retrieve user's bookings and orders with optional filtering.
+
+**Endpoint:** `GET /api/bookings-orders`
+
+**Authentication:** Required (Bearer token)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description | Constraints |
+|-----------|------|----------|-------------|-------------|
+| status | string | No | Filter by status | `pending`, `approved`, `rejected`, `cancelled` |
+| type | string | No | Filter by type | `booking`, `order` |
+
+**Example Request:**
+```http
+GET /api/bookings-orders?status=pending&type=booking
+```
+
+**Success Response:** `200 OK`
+```json
+{
+  "success": true,
+  "bookings": [
+    {
+      "BookingOrderId": "uuid",
+      "Type": "booking",
+      "VendorName": "AgriMax Labs",
+      "ServiceProduct": "Soil testing",
+      "EstimatedCost": "₹500",
+      "Status": "pending",
+      "CreatedAtISO": "2025-10-21T10:00:00Z"
+    }
+  ],
+  "orders": [],
+  "total_count": 1,
+  "bookings_count": 1,
+  "orders_count": 0
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized**
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid token"
+}
+```
+
+---
+
+### 17. Update Booking/Order Status
+
+Update the status of a booking or order.
+
+**Endpoint:** `PUT /api/bookings-orders/update`
+
+**Authentication:** Required (Bearer token)
+
+**Request Body:**
+```json
+{
+  "booking_order_id": "uuid",
+  "type": "booking",
+  "status": "approved"
+}
+```
+
+**Request Body Parameters:**
+
+| Parameter | Type | Required | Description | Constraints |
+|-----------|------|----------|-------------|-------------|
+| booking_order_id | string | Yes | Booking/Order ID | UUID |
+| type | string | Yes | Type | `booking` or `order` |
+| status | string | Yes | New status | `approved`, `rejected`, `cancelled` |
+
+**Success Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Status updated to approved",
+  "booking_order": {
+    "BookingOrderId": "uuid",
+    "Status": "approved",
+    "UpdatedAtISO": "2025-10-21T10:05:00Z"
+  }
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request** - Missing fields
+```json
+{
+  "error": "ValidationError",
+  "message": "booking_order_id, type, and status are required"
+}
+```
+
+**404 Not Found** - Item not found
+```json
+{
+  "error": "NotFound",
+  "message": "Booking/order not found"
+}
+```
+
+---
+
 ## Error Responses
 
 All error responses follow a consistent structure:
@@ -1569,6 +1684,11 @@ For API support, please contact:
 
 ## Changelog
 
+### Version 1.1.0 (2025-10-21)
+- **New**: Bookings & Orders endpoints
+- **New**: AI-powered booking/order suggestions in chat
+- **New**: Status management for bookings and orders
+
 ### Version 1.0.0 (2025-10-14)
 - Initial release
 - Authentication with JWT tokens
@@ -1581,6 +1701,6 @@ For API support, please contact:
 
 ---
 
-**Last Updated:** October 14, 2025  
-**API Version:** 1.0.0  
-**Document Version:** 1.0.0
+**Last Updated:** October 21, 2025  
+**API Version:** 1.1.0  
+**Document Version:** 1.1.0

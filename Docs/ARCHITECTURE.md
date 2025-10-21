@@ -73,6 +73,7 @@ Kisaantic AI is built on a **fully serverless AWS architecture** leveraging **10
 │  • /api/weather/* (3 endpoints)                                 │
 │  • /api/agro-api/* (4 endpoints)                                │
 │  • /api/sessions/* (5 endpoints)                                │
+│  • /api/bookings-orders/* (2 endpoints)                         │
 │                                                                 │
 │  Created: Manually via AWS Console                              │
 │  Deployment: Manual stage deployment                            │
@@ -83,7 +84,7 @@ Kisaantic AI is built on a **fully serverless AWS architecture** leveraging **10
               ▼              ▼              ▼
 ┌──────────────────┐ ┌──────────────┐ ┌──────────────┐
 │ Auth Lambdas     │ │ Chat Lambda  │ │ Data Lambdas │
-│ (6 functions)    │ │ (1 function) │ │ (12 funcs)   │
+│ (6 functions)    │ │ (1 function) │ │ (14 funcs)   │
 │                  │ │              │ │              │
 │ Python 3.13      │ │ Python 3.13  │ │ Python 3.13  │
 │ 512 MB RAM       │ │ 512 MB RAM   │ │ 512 MB RAM   │
@@ -544,7 +545,7 @@ Live in ~3-5 minutes
 
 ## Backend Architecture
 
-### AWS Lambda Functions (19 Total)
+### AWS Lambda Functions (21 Total)
 
 **Deployment Method**: Manual creation via AWS Console
 
