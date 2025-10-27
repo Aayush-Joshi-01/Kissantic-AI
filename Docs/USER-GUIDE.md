@@ -611,7 +611,7 @@ We're continuously improving Kisaantic AI. Your suggestions help us serve farmer
 | **Language Support** | 50+ languages (Hindi, English, French, etc.) |
 | **Cost** | Free for farmers |
 | **Data Storage** | Cloud-based, accessible from any device |
-| **Support Email** | support@kisaantic.com |
+| **Support Email** | aayushjoshi.dev@gmail.com |
 
 ### Quick Actions
 
